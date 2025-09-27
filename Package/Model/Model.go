@@ -15,3 +15,19 @@ type UpdateTaskStoreRequest struct {
 	ID   int64
 	Task TaskStoreRequest
 }
+
+type DeleteTaskStoreRequest struct {
+	ID   int64
+	Task TaskStoreRequest
+}
+
+type DeleteTaskStoreResponse struct {
+	Status bool
+	ID     int64
+	Task   TaskStoreRequest
+}
+
+type ListTaskStore struct {
+	Limit  int64
+	Offset int64
+}
