@@ -21,11 +21,11 @@ type ModelStruct struct {
 	TxOption sql.TxOptions
 }
 
-func NewModel(Configuration Configurator.ConfiguratorStruct) *ModelStruct {
+func NewModel(Configuration Configurator.ConfiguratorStruct) ModelStruct {
 	txOption := sql.TxOptions{
 		Isolation: sql.LevelSerializable,
 	}
-	return &ModelStruct{
+	return ModelStruct{
 		Config:   Configuration,
 		TxOption: txOption,
 	}
