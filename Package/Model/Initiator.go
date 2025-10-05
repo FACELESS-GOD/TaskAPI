@@ -35,17 +35,23 @@ const AddTaskQuery string = `
 INSERT INTO TaskStore (
   Title, Task_Description
 ) VALUES (
-  ? , ? , ?, ?
+  ? , ? 
 )
 ;
 `
 
-func (Model *ModelStruct) AddTask(Task TaskStoreRequest, WaitGroup *sync.WaitGroup) (TaskStoreResponse, error) {
-	defer WaitGroup.Done()
+func (Model *ModelStruct) AddTask(Task TaskStoreRequest, WGp *sync.WaitGroup) (TaskStoreResponse, error) {
+	defer WGp.Done()
 
-	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*10)
+	if Task.Task_Status != true {
+		return TaskStoreResponse{}, errors.New("invalid data.")
+	} else if len(Task.Title) <= 0 || len(Task.Task_Description) <= 0 {
+		return TaskStoreResponse{}, errors.New("invalid data.")
+	}
 
-	db, err := Model.Config.SqlDBConn.BeginTx(Model.Config.DbCtx, &Model.TxOption)
+	ctx := context.WithoutCancel(context.Background())
+
+	db, err := Model.Config.SqlDBConn.BeginTx(ctx, &Model.TxOption)
 
 	if err != nil {
 		return TaskStoreResponse{}, err
@@ -73,14 +79,14 @@ func (Model *ModelStruct) AddTask(Task TaskStoreRequest, WaitGroup *sync.WaitGro
 		}
 	}
 
-	errMessage := db.Commit().Error()
+	err = db.Commit()
 
-	if len(errMessage) >= 1 {
+	if err != nil {
 		nerr := db.Rollback().Error()
 		if len(nerr) >= 1 {
 			return TaskStoreResponse{}, errors.New(nerr)
 		} else {
-			return TaskStoreResponse{}, errors.New(errMessage)
+			return TaskStoreResponse{}, err
 		}
 	}
 
@@ -88,16 +94,13 @@ func (Model *ModelStruct) AddTask(Task TaskStoreRequest, WaitGroup *sync.WaitGro
 		ID:   taskID,
 		Task: Task,
 	}
-
-	defer cancelFunc()
-
 	return resp, nil
 
 }
 
 const EditTaskQuery string = `
 UPDATE TaskStore 
-SET Title = ? , Task_Description = ? ,Task_Status = ? ,Edited_On = CURRENT_TIMESTAMP()
+SET Title = ? , Task_Description = ? ,Edited_On = CURRENT_TIMESTAMP()
 WHERE ID = ? 
 ;
 `
@@ -105,7 +108,7 @@ WHERE ID = ?
 func (Model *ModelStruct) EditTask(Task UpdateTaskStoreRequest, WaitGroup *sync.WaitGroup) (TaskStoreResponse, error) {
 	defer WaitGroup.Done()
 
-	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*100)
 	defer cancelFunc()
 
 	db, err := Model.Config.SqlDBConn.BeginTx(ctx, &Model.TxOption)
@@ -114,7 +117,7 @@ func (Model *ModelStruct) EditTask(Task UpdateTaskStoreRequest, WaitGroup *sync.
 		return TaskStoreResponse{}, err
 	}
 
-	resp, err := db.ExecContext(ctx, EditTaskQuery, Task.Task.Title, Task.Task.Task_Description, Task.Task.Task_Status, Task.ID)
+	resp, err := db.ExecContext(ctx, EditTaskQuery, Task.Task.Title, Task.Task.Task_Description, Task.ID)
 
 	if err != nil {
 		nerr := db.Rollback().Error()
@@ -224,7 +227,7 @@ func (Model *ModelStruct) DeleteTask(Task DeleteTaskStoreRequest, WaitGroup *syn
 
 const ListTaskQuery string = `
 SELECT * FROM TaskStore
-LIMIT ?, ?
+LIMIT ?, ? 
 ;
 `
 
