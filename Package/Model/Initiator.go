@@ -140,18 +140,16 @@ func (Model *ModelStruct) EditTask(Task UpdateTaskStoreRequest, WaitGroup *sync.
 	}
 
 	if numRowAffected > 1 || numRowAffected <= 0 {
-		nerr := db.Rollback().Error()
-		if len(nerr) >= 1 {
-			return TaskStoreResponse{}, errors.New(nerr)
-		} else {
-			return TaskStoreResponse{}, errors.New("Invalid Query!")
+		err := db.Rollback()
+		if err != nil {
+			return TaskStoreResponse{}, err
 		}
 	}
 
-	errMessage := db.Commit().Error()
+	err = db.Commit()
 
-	if len(errMessage) >= 1 {
-		return TaskStoreResponse{}, errors.New(errMessage)
+	if err != nil {
+		return TaskStoreResponse{}, err
 	}
 
 	return TaskStoreResponse{
@@ -183,38 +181,32 @@ func (Model *ModelStruct) DeleteTask(Task DeleteTaskStoreRequest, WaitGroup *syn
 	resp, err := db.ExecContext(ctx, DeleteTaskQuery, Task.ID)
 
 	if err != nil {
-		nerr := db.Rollback().Error()
-		if len(nerr) >= 1 {
-			return DeleteTaskStoreResponse{}, errors.New(nerr)
-		} else {
-			return DeleteTaskStoreResponse{}, err
+		nerr := db.Rollback()
+		if nerr != nil {
+			return DeleteTaskStoreResponse{}, nerr
 		}
 	}
 
 	numRowAffected, err := resp.RowsAffected()
 
 	if err != nil {
-		nerr := db.Rollback().Error()
-		if len(nerr) >= 1 {
-			return DeleteTaskStoreResponse{}, errors.New(nerr)
-		} else {
-			return DeleteTaskStoreResponse{}, err
+		nerr := db.Rollback()
+		if nerr != nil {
+			return DeleteTaskStoreResponse{}, nerr
 		}
 	}
 
 	if numRowAffected > 1 || numRowAffected <= 0 {
-		nerr := db.Rollback().Error()
-		if len(nerr) >= 1 {
-			return DeleteTaskStoreResponse{}, errors.New(nerr)
-		} else {
-			return DeleteTaskStoreResponse{}, errors.New("Invalid Query!")
+		err := db.Rollback()
+		if err != nil {
+			return DeleteTaskStoreResponse{}, err
 		}
 	}
 
-	errMessage := db.Commit().Error()
+	errMessage := db.Commit()
 
-	if len(errMessage) >= 1 {
-		return DeleteTaskStoreResponse{}, errors.New(errMessage)
+	if errMessage != nil {
+		return DeleteTaskStoreResponse{}, errMessage
 	}
 
 	return DeleteTaskStoreResponse{
@@ -245,14 +237,14 @@ func (Model *ModelStruct) ListTask(Task ListTaskStore, WaitGroup *sync.WaitGroup
 		return respList, err
 	}
 
+	Task.Offset = (Task.Page - 1) * Task.Limit
+
 	resp, err := db.QueryContext(ctx, ListTaskQuery, Task.Offset, Task.Limit)
 
 	if err != nil {
-		nerr := db.Rollback().Error()
-		if len(nerr) >= 1 {
-			return respList, errors.New(nerr)
-		} else {
-			return respList, err
+		nerr := db.Rollback()
+		if nerr != nil {
+			return respList, nerr
 		}
 	}
 
@@ -272,10 +264,10 @@ func (Model *ModelStruct) ListTask(Task ListTaskStore, WaitGroup *sync.WaitGroup
 		respList = append(respList, taskResp)
 	}
 
-	errMessage := db.Commit().Error()
+	errMessage := db.Commit()
 
-	if len(errMessage) >= 1 {
-		return nil, errors.New(errMessage)
+	if errMessage != nil {
+		return nil, errMessage
 	}
 
 	return respList, nil

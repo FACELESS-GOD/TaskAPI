@@ -112,7 +112,7 @@ func (Suite *SuiteStruct) TestAddTask() {
 
 // func (Model *ModelStruct) EditTask(Task UpdateTaskStoreRequest, WaitGroup *sync.WaitGroup) (TaskStoreResponse, error) {
 func (Suite *SuiteStruct) TestEditTask() {
-   	wg := sync.WaitGroup{}
+	wg := sync.WaitGroup{}
 	wg.Add(1)
 	resp, err := Suite.Model.AddTask(TaskStoreRequest{
 		Title:            "New",
@@ -133,17 +133,22 @@ func (Suite *SuiteStruct) TestEditTask() {
 	Suite.Suite.NoError(err, "Error occured in Postive case.")
 
 	respList := make([]TaskStoreResponse, 10)
-
+	var count int = 0
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
-		resp, err = Suite.Model.EditTask(UpdateTaskStoreRequest{
+		resp_new, err := Suite.Model.EditTask(UpdateTaskStoreRequest{
 			ID:   resp.ID,
 			Task: newTask,
 		}, &wg)
 
+		Suite.Suite.NoError(err, "Error occured even before the edit Test Case Start! .")
+
+		Suite.Suite.NotNil(resp_new, "Error occured even before the edit Test Case Start! .")
+
+		//respList = append(respList, resp_new)
 		respList[i].ID = resp.ID
 		respList[i].Task = resp.Task
-
+		count = count + 1
 	}
 
 	wg.Wait()
@@ -175,6 +180,37 @@ func (Suite *SuiteStruct) TestEditTask() {
 }
 
 func (Suite *SuiteStruct) TestDeleteTask() {
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	resp, err := Suite.Model.AddTask(TaskStoreRequest{
+		Title:            "New",
+		Task_Description: "This",
+		Task_Status:      true,
+	}, &wg)
+	wg.Wait()
+	Suite.Suite.NoError(err, "Error occured even before the edit Test Case Start! .")
+
+	wg.Add(1)
+	del_resp, err := Suite.Model.DeleteTask(DeleteTaskStoreRequest{
+		ID:   resp.ID,
+		Task: resp.Task,
+	}, &wg)
+
+	wg.Wait()
+	Suite.Suite.NoError(err, "Error occue while Positive delete.")
+	Suite.Suite.NotNil(del_resp, "Error occue while Positive delete.")
+
+	Suite.Suite.Equal(resp.ID, del_resp.ID, "Error occue while Positive delete.")
+
+	wg.Add(1)
+	neg_val, err := Suite.Model.DeleteTask(DeleteTaskStoreRequest{
+		ID:   del_resp.ID,
+		Task: del_resp.Task,
+	}, &wg)
+
+	Suite.Suite.NoError(err, "Negative Test Case Failed!")
+	Suite.Suite.Equal(neg_val.Status, del_resp.Status, "Negative Test Case Failed!")
 
 }
 

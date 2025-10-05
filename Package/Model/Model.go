@@ -29,5 +29,6 @@ type DeleteTaskStoreResponse struct {
 
 type ListTaskStore struct {
 	Limit  int64
+	Page   int64
 	Offset int64
 }
