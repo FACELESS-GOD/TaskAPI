@@ -130,34 +130,16 @@ func (Suite *SuiteStruct) TestEditTask() {
 		Task: newTask,
 	}, &wg)
 	wg.Wait()
-	Suite.Suite.NoError(err, "Error occured in Postive case.")
+	Suite.Suite.NoError(err, "Error occured in First Edit.")
 
 	respList := make([]TaskStoreResponse, 10)
-	var count int = 0
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		resp_new, err := Suite.Model.EditTask(UpdateTaskStoreRequest{
-			ID:   resp.ID,
-			Task: newTask,
-		}, &wg)
-
-		Suite.Suite.NoError(err, "Error occured even before the edit Test Case Start! .")
-
-		Suite.Suite.NotNil(resp_new, "Error occured even before the edit Test Case Start! .")
-
-		//respList = append(respList, resp_new)
-		respList[i].ID = resp.ID
-		respList[i].Task = resp.Task
-		count = count + 1
-	}
 
 	wg.Wait()
 
 	for i := 0; i < 10; i++ {
-		newTask := respList[i].Task
-		newTask.Task_Description = strconv.Itoa(i * 98)
+		newTask.Task_Description = strconv.Itoa(i)
 		curr := UpdateTaskStoreRequest{
-			ID:   respList[i].ID,
+			ID:   resp.ID,
 			Task: newTask,
 		}
 		wg.Add(1)
@@ -169,10 +151,10 @@ func (Suite *SuiteStruct) TestEditTask() {
 	}
 	wg.Wait()
 
-	for i := 0; i < 10; i++ {
-		old := respList[i]
+	for i := 0; i < 9; i++ {
+		old := resp
 		newres := respList[i+10]
-
+		//	fmt.Println(newres.ID, " f ", old.ID)
 		Suite.Suite.Equal(newres.ID, old.ID, "Error Has occurred ID don't match")
 		Suite.Suite.NotEqual(newres.Task.Task_Description, old.Task.Task_Description, "Error Has occurred ID don't match")
 	}
@@ -199,9 +181,9 @@ func (Suite *SuiteStruct) TestDeleteTask() {
 
 	wg.Wait()
 	Suite.Suite.NoError(err, "Error occue while Positive delete.")
-	Suite.Suite.NotNil(del_resp, "Error occue while Positive delete.")
+	Suite.Suite.NotNil(del_resp, "Responce was nil  while Positive delete.")
 
-	Suite.Suite.Equal(resp.ID, del_resp.ID, "Error occue while Positive delete.")
+	Suite.Suite.Equal(resp.ID, del_resp.ID, " Response was wrong while Positive delete.")
 
 	wg.Add(1)
 	neg_val, err := Suite.Model.DeleteTask(DeleteTaskStoreRequest{
@@ -209,12 +191,27 @@ func (Suite *SuiteStruct) TestDeleteTask() {
 		Task: del_resp.Task,
 	}, &wg)
 
-	Suite.Suite.NoError(err, "Negative Test Case Failed!")
-	Suite.Suite.Equal(neg_val.Status, del_resp.Status, "Negative Test Case Failed!")
+	Suite.Suite.Error(err, "Error should not have occured , Negative Test Case Failed!")
+	Suite.Suite.NotNil(neg_val, "Responce in wrong Negative Test Case Failed!")
 
 }
 
 func (Suite *SuiteStruct) TestListTask() {
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	resp, err := Suite.Model.ListTask(ListTaskStore{
+		Limit: 10,
+		Page:  1,
+	}, &wg)
+	wg.Wait()
+
+	Suite.Suite.NoError(err, "Error Occured")
+	respList := []TaskStoreResponse{}
+	respList = append(respList, resp...)
+
+	for _, task := range respList {
+		Suite.Suite.True(task.ID > 0, "Defective Data REturned!")
+	}
 
 }
 

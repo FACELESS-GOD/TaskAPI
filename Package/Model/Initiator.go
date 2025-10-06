@@ -237,6 +237,11 @@ func (Model *ModelStruct) ListTask(Task ListTaskStore, WaitGroup *sync.WaitGroup
 		return respList, err
 	}
 
+	if Task.Limit < 1 || Task.Page < 1 {
+		Task.Limit = 10
+		Task.Page = 1
+	}
+
 	Task.Offset = (Task.Page - 1) * Task.Limit
 
 	resp, err := db.QueryContext(ctx, ListTaskQuery, Task.Offset, Task.Limit)
@@ -251,12 +256,15 @@ func (Model *ModelStruct) ListTask(Task ListTaskStore, WaitGroup *sync.WaitGroup
 	for resp.Next() {
 		var taskResp TaskStoreResponse
 		var task TaskStoreRequest
-
+		t := ""
+		e := ""
 		if err := resp.Scan(
 			&taskResp.ID,
 			&task.Title,
 			&task.Task_Description,
 			&task.Task_Status,
+			&t,
+			&e,
 		); err != nil {
 			return nil, err
 		}
