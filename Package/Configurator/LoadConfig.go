@@ -33,7 +33,7 @@ func (Conf *ConfiguratorStruct) LoadConfig(Mode int) {
 	case Startup.DebugMode:
 
 		Conf.DbDriver = "mysql"
-		Conf.DbConnString = ""
+		Conf.DbConnString = "m"
 
 	case Startup.QAMode:
 
