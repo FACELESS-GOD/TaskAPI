@@ -40,12 +40,15 @@ INSERT INTO TaskStore (
 ;
 `
 
-func (Model *ModelStruct) AddTask(Task TaskStoreRequest) (TaskStoreResponse, error) {
+func (Model *ModelStruct) AddTask(Task TaskStoreRequest, Wg *sync.WaitGroup, ResultChannel chan<- TaskStoreResponse, ErrorChannel chan<- error) {
 
-	if Task.Task_Status != true {
-		return TaskStoreResponse{}, errors.New("invalid data.")
-	} else if len(Task.Title) <= 0 || len(Task.Task_Description) <= 0 {
-		return TaskStoreResponse{}, errors.New("invalid data.")
+	defer Wg.Done()
+
+	isValid, errorMessage := Model.ValidateParamAddTask(Task)
+
+	if isValid == true {
+		errorObj := errors.New(errorMessage)
+		ErrorChannel <- errorObj
 	}
 
 	ctx := context.WithoutCancel(context.Background())
@@ -94,6 +97,37 @@ func (Model *ModelStruct) AddTask(Task TaskStoreRequest) (TaskStoreResponse, err
 		Task: Task,
 	}
 	return resp, nil
+
+}
+
+func (Model *ModelStruct) ValidateParamAddTask(Task TaskStoreRequest) (bool, string) {
+	errorMessages := []string{}
+	var isValid bool = false
+	if Task.Task_Status != true {
+		isValid = false
+		errorMessages = append(errorMessages, "Invalid Task Status")
+
+	}
+	if len(Task.Title) <= 0 {
+
+		isValid = false
+		errorMessages = append(errorMessages, "Invalid Title .")
+
+	}
+
+	if len(Task.Task_Description) <= 0 {
+
+		isValid = false
+		errorMessages = append(errorMessages, "Invalid Description")
+	}
+
+	errorMessage := ""
+
+	for _, message := range errorMessages {
+		errorMessage = errorMessage + message + " , "
+	}
+
+	return isValid, errorMessage
 
 }
 
