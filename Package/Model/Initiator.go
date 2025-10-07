@@ -49,6 +49,7 @@ func (Model *ModelStruct) AddTask(Task TaskStoreRequest, Wg *sync.WaitGroup, Res
 	if isValid == true {
 		errorObj := errors.New(errorMessage)
 		ErrorChannel <- errorObj
+		return
 	}
 
 	ctx := context.WithoutCancel(context.Background())
@@ -56,7 +57,8 @@ func (Model *ModelStruct) AddTask(Task TaskStoreRequest, Wg *sync.WaitGroup, Res
 	db, err := Model.Config.SqlDBConn.BeginTx(ctx, &Model.TxOption)
 
 	if err != nil {
-		return TaskStoreResponse{}, err
+		ErrorChannel <- err
+		return
 	}
 
 	res, err := db.ExecContext(ctx, AddTaskQuery, Task.Title, Task.Task_Description)
@@ -64,9 +66,12 @@ func (Model *ModelStruct) AddTask(Task TaskStoreRequest, Wg *sync.WaitGroup, Res
 	if err != nil {
 		nerr := db.Rollback().Error()
 		if len(nerr) >= 1 {
-			return TaskStoreResponse{}, errors.New(nerr)
+			errorObj := errors.New(nerr + " , " + err.Error())
+			ErrorChannel <- errorObj
+			return
 		} else {
-			return TaskStoreResponse{}, err
+			ErrorChannel <- err
+			return
 		}
 	}
 
@@ -75,9 +80,13 @@ func (Model *ModelStruct) AddTask(Task TaskStoreRequest, Wg *sync.WaitGroup, Res
 	if err != nil {
 		nerr := db.Rollback().Error()
 		if len(nerr) >= 1 {
-			return TaskStoreResponse{}, errors.New(nerr)
+			errorObj := errors.New(nerr + " , " + err.Error())
+			ErrorChannel <- errorObj
+			return
+
 		} else {
-			return TaskStoreResponse{}, err
+			ErrorChannel <- err
+			return
 		}
 	}
 
@@ -86,9 +95,12 @@ func (Model *ModelStruct) AddTask(Task TaskStoreRequest, Wg *sync.WaitGroup, Res
 	if err != nil {
 		nerr := db.Rollback().Error()
 		if len(nerr) >= 1 {
-			return TaskStoreResponse{}, errors.New(nerr)
+			errorObj := errors.New(nerr + " , " + err.Error())
+			ErrorChannel <- errorObj
+			return
 		} else {
-			return TaskStoreResponse{}, err
+			ErrorChannel <- err
+			return
 		}
 	}
 
@@ -96,7 +108,8 @@ func (Model *ModelStruct) AddTask(Task TaskStoreRequest, Wg *sync.WaitGroup, Res
 		ID:   taskID,
 		Task: Task,
 	}
-	return resp, nil
+	ResultChannel <- resp
+	return
 
 }
 
