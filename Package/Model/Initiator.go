@@ -40,8 +40,7 @@ INSERT INTO TaskStore (
 ;
 `
 
-func (Model *ModelStruct) AddTask(Task TaskStoreRequest, WGp *sync.WaitGroup) (TaskStoreResponse, error) {
-	defer WGp.Done()
+func (Model *ModelStruct) AddTask(Task TaskStoreRequest) (TaskStoreResponse, error) {
 
 	if Task.Task_Status != true {
 		return TaskStoreResponse{}, errors.New("invalid data.")
@@ -105,8 +104,7 @@ WHERE ID = ?
 ;
 `
 
-func (Model *ModelStruct) EditTask(Task UpdateTaskStoreRequest, WaitGroup *sync.WaitGroup) (TaskStoreResponse, error) {
-	defer WaitGroup.Done()
+func (Model *ModelStruct) EditTask(Task UpdateTaskStoreRequest) (TaskStoreResponse, error) {
 
 	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*100)
 	defer cancelFunc()
@@ -166,8 +164,7 @@ WHERE ID = ?
 ;
 `
 
-func (Model *ModelStruct) DeleteTask(Task DeleteTaskStoreRequest, WaitGroup *sync.WaitGroup) (DeleteTaskStoreResponse, error) {
-	defer WaitGroup.Done()
+func (Model *ModelStruct) DeleteTask(Task DeleteTaskStoreRequest) (DeleteTaskStoreResponse, error) {
 
 	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancelFunc()
@@ -223,8 +220,7 @@ LIMIT ?, ?
 ;
 `
 
-func (Model *ModelStruct) ListTask(Task ListTaskStore, WaitGroup *sync.WaitGroup) ([]TaskStoreResponse, error) {
-	defer WaitGroup.Done()
+func (Model *ModelStruct) ListTask(Task ListTaskStore) ([]TaskStoreResponse, error) {
 
 	respList := []TaskStoreResponse{}
 
