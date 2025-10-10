@@ -10,10 +10,10 @@ import (
 )
 
 type ModelInterface interface {
-	AddTask(Task TaskStoreRequest, WaitGroup *sync.WaitGroup) (TaskStoreResponse, error)
-	EditTask(Task UpdateTaskStoreRequest, WaitGroup *sync.WaitGroup) (TaskStoreResponse, error)
-	DeleteTask(Task DeleteTaskStoreRequest, WaitGroup *sync.WaitGroup) (DeleteTaskStoreResponse, error)
-	ListTask(ListTask ListTaskStore, WaitGroup *sync.WaitGroup) ([]TaskStoreResponse, error)
+	AddTask(Task TaskStoreRequest, Wg *sync.WaitGroup, ResultChannel chan<- TaskStoreResponse, ErrorChannel chan<- error)
+	EditTask(Task UpdateTaskStoreRequest, Wg *sync.WaitGroup, ResultChannel chan<- TaskStoreResponse, ErrorChannel chan<- error)
+	DeleteTask(Task DeleteTaskStoreRequest, Wg *sync.WaitGroup, ResultChannel chan<- DeleteTaskStoreResponse, ErrorChannel chan<- error)
+	ListTask(ListTask ListTaskStore, WaitGroup *sync.WaitGroup)
 }
 
 type ModelStruct struct {
