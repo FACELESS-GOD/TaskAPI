@@ -108,6 +108,7 @@ func (Model *ModelStruct) AddTask(Task TaskStoreRequest, Wg *sync.WaitGroup, Res
 		ID:   taskID,
 		Task: Task,
 	}
+
 	ResultChannel <- resp
 	return
 
@@ -117,20 +118,20 @@ func (Model *ModelStruct) ValidateParamAddTask(Task TaskStoreRequest) (bool, str
 	errorMessages := []string{}
 	var isValid bool = false
 	if Task.Task_Status != true {
-		isValid = false
+		isValid = true
 		errorMessages = append(errorMessages, "Invalid Task Status")
 
 	}
 	if len(Task.Title) <= 0 {
 
-		isValid = false
+		isValid = true
 		errorMessages = append(errorMessages, "Invalid Title .")
 
 	}
 
 	if len(Task.Task_Description) <= 0 {
 
-		isValid = false
+		isValid = true
 		errorMessages = append(errorMessages, "Invalid Description")
 	}
 
@@ -151,56 +152,100 @@ WHERE ID = ?
 ;
 `
 
-func (Model *ModelStruct) EditTask(Task UpdateTaskStoreRequest) (TaskStoreResponse, error) {
+func (Model *ModelStruct) ValidateParamEditTask(Task UpdateTaskStoreRequest) (bool, string) {
+	var IsValid bool = false
+	errMessages := []string{}
+	errorMessage := ""
 
+	if Task.ID < 1 {
+		IsValid = true
+		errMessages = append(errMessages, "Invalid ID!")
+	}
+
+	validity, message := Model.ValidateParamAddTask(Task.Task)
+
+	if validity == true {
+		IsValid = validity
+		errMessages = append(errMessages, message)
+	}
+
+	for _, message := range errMessages {
+		errorMessage = errorMessage + message + " , "
+	}
+
+	return IsValid, errorMessage
+}
+
+func (Model *ModelStruct) EditTask(Task UpdateTaskStoreRequest, Wg *sync.WaitGroup, ResultChannel chan<- TaskStoreResponse, ErrorChannel chan<- error) {
+	defer Wg.Done()
 	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*100)
 	defer cancelFunc()
+
+	isValid, message := Model.ValidateParamEditTask(Task)
+
+	if isValid == true {
+		errObj := errors.New(message)
+		ErrorChannel <- errObj
+	}
 
 	db, err := Model.Config.SqlDBConn.BeginTx(ctx, &Model.TxOption)
 
 	if err != nil {
-		return TaskStoreResponse{}, err
+		ErrorChannel <- err
+		return
 	}
 
 	resp, err := db.ExecContext(ctx, EditTaskQuery, Task.Task.Title, Task.Task.Task_Description, Task.ID)
 
 	if err != nil {
-		nerr := db.Rollback().Error()
-		if len(nerr) >= 1 {
-			return TaskStoreResponse{}, errors.New(nerr)
+		rollBackErr := db.Rollback()
+		if rollBackErr != nil {
+			ErrorChannel <- rollBackErr
+			return
 		} else {
-			return TaskStoreResponse{}, err
+			ErrorChannel <- err
+			return
 		}
 	}
 
 	numRowAffected, err := resp.RowsAffected()
 
 	if err != nil {
-		nerr := db.Rollback().Error()
-		if len(nerr) >= 1 {
-			return TaskStoreResponse{}, errors.New(nerr)
+		rollBackErr := db.Rollback()
+		if rollBackErr != nil {
+			ErrorChannel <- rollBackErr
+			return
 		} else {
-			return TaskStoreResponse{}, err
+			ErrorChannel <- err
+			return
 		}
 	}
 
 	if numRowAffected > 1 || numRowAffected <= 0 {
-		err := db.Rollback()
-		if err != nil {
-			return TaskStoreResponse{}, err
+		rollBackErr := db.Rollback()
+		if rollBackErr != nil {
+			ErrorChannel <- rollBackErr
+			return
+		} else {
+			ErrorChannel <- err
+			return
 		}
 	}
 
 	err = db.Commit()
 
 	if err != nil {
-		return TaskStoreResponse{}, err
+		ErrorChannel <- err
+		return
 	}
 
-	return TaskStoreResponse{
+	reslt := TaskStoreResponse{
 		ID:   Task.ID,
 		Task: Task.Task,
-	}, nil
+	}
+
+	ResultChannel <- reslt
+	return
 
 }
 
@@ -211,7 +256,9 @@ WHERE ID = ?
 ;
 `
 
-func (Model *ModelStruct) DeleteTask(Task DeleteTaskStoreRequest) (DeleteTaskStoreResponse, error) {
+func (Model *ModelStruct) DeleteTask(Task DeleteTaskStoreRequest, Wg *sync.WaitGroup, ResultChannel chan<- DeleteTaskStoreResponse, ErrorChannel chan<- error) {
+
+	defer Wg.Done()
 
 	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancelFunc()
@@ -219,7 +266,8 @@ func (Model *ModelStruct) DeleteTask(Task DeleteTaskStoreRequest) (DeleteTaskSto
 	db, err := Model.Config.SqlDBConn.BeginTx(ctx, &Model.TxOption)
 
 	if err != nil {
-		return DeleteTaskStoreResponse{}, err
+
+		ErrorChannel <- err
 	}
 
 	resp, err := db.ExecContext(ctx, DeleteTaskQuery, Task.ID)
@@ -227,7 +275,9 @@ func (Model *ModelStruct) DeleteTask(Task DeleteTaskStoreRequest) (DeleteTaskSto
 	if err != nil {
 		nerr := db.Rollback()
 		if nerr != nil {
-			return DeleteTaskStoreResponse{}, nerr
+			ErrorChannel <- nerr
+		} else {
+			ErrorChannel <- err
 		}
 	}
 
@@ -236,28 +286,36 @@ func (Model *ModelStruct) DeleteTask(Task DeleteTaskStoreRequest) (DeleteTaskSto
 	if err != nil {
 		nerr := db.Rollback()
 		if nerr != nil {
-			return DeleteTaskStoreResponse{}, nerr
+			ErrorChannel <- nerr
+		} else {
+			ErrorChannel <- err
 		}
 	}
 
 	if numRowAffected > 1 || numRowAffected <= 0 {
-		err := db.Rollback()
-		if err != nil {
-			return DeleteTaskStoreResponse{}, err
+		nerr := db.Rollback()
+		if nerr != nil {
+			ErrorChannel <- nerr
+		} else {
+			ErrorChannel <- err
 		}
 	}
 
 	errMessage := db.Commit()
 
 	if errMessage != nil {
-		return DeleteTaskStoreResponse{}, errMessage
+		ErrorChannel <- errMessage
 	}
 
-	return DeleteTaskStoreResponse{
+	resl := DeleteTaskStoreResponse{
 		ID:     Task.ID,
 		Status: true,
 		Task:   Task.Task,
-	}, nil
+	}
+
+	ResultChannel <- resl
+
+	return
 
 }
 

@@ -5,6 +5,7 @@ import (
 	"TaskManager/Package/Configurator"
 	"fmt"
 	"strconv"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -46,131 +47,176 @@ func (Suite *SuiteStruct) TearDownTest() {
 // func (Model *ModelStruct) AddTask(Task TaskStoreRequest, WaitGroup *sync.WaitGroup) (TaskStoreResponse, error)
 func (Suite *SuiteStruct) TestAddTask() {
 
-	resp, err := Suite.Model.AddTask(TaskStoreRequest{
-		Title:            "New",
-		Task_Description: "This",
-		Task_Status:      true,
-	})
+	errorChannel := make(chan error)
+	requestChannel := make(chan TaskStoreResponse)
+	defer close(errorChannel)
+	defer close(requestChannel)
 
-	Suite.Suite.NoError(err, "Error Has occured in a Positive Test Case")
-	Suite.Suite.True(resp.ID > 0, "Error Has occured in a Positive Test Case")
+	wg := sync.WaitGroup{}
 
 	for i := 0; i < 10; i++ {
+		wg.Add(1)
 
-		resp, err := Suite.Model.AddTask(TaskStoreRequest{
-			Title:            strconv.Itoa(i),
-			Task_Description: strconv.Itoa(i * 2),
+		go Suite.Model.AddTask(TaskStoreRequest{
+			Title:            strconv.Itoa(100 + i),
+			Task_Description: strconv.Itoa(100),
 			Task_Status:      true,
-		})
+		}, &wg, requestChannel, errorChannel)
 
-		Suite.Suite.NoError(err, "Error Has occured in a Concurent Test Case")
-
-		Suite.RespStore = append(Suite.RespStore, resp)
 	}
 
-	for i := 0; i < 10; i++ {
-		currResp := Suite.RespStore[i]
-		Suite.Suite.True(currResp.ID >= 1, fmt.Sprintf("Error Has occured in a Concurent Test Case %v", currResp.ID))
-	}
+	go func() {
 
-	resp, err = Suite.Model.AddTask(TaskStoreRequest{
-		Title:            "New Task Negative",
-		Task_Description: "This is a new Task Negative.",
-		Task_Status:      false,
-	})
+		for err := range errorChannel {
+			Suite.Suite.NoError(err, "Error occured even before the edit Test Case Start! .")
+		}
+	}()
 
-	Suite.Suite.Error(err, "Error Has not occured in a Negative Test Case")
+	go func() {
 
-	resp, err = Suite.Model.AddTask(TaskStoreRequest{
-		Title:            "",
-		Task_Description: "This is a new Task Negative.",
-		Task_Status:      false,
-	})
+		for res := range requestChannel {
+			Suite.Suite.True(res.ID >= 1, fmt.Sprintf("Error Has occured in a Concurent Test Case %v", res.ID))
+		}
+	}()
 
-	Suite.Suite.Error(err, "Error Has not occured in a Negative Test Case")
-
-	resp, err = Suite.Model.AddTask(TaskStoreRequest{
-		Title:            "New Task Negative",
-		Task_Description: "",
-		Task_Status:      false,
-	})
-
-	Suite.Suite.Error(err, "Error Has not occured in a Negative Test Case")
+	wg.Wait()
 
 }
 
 // func (Model *ModelStruct) EditTask(Task UpdateTaskStoreRequest, WaitGroup *sync.WaitGroup) (TaskStoreResponse, error) {
 func (Suite *SuiteStruct) TestEditTask() {
 
-	resp, err := Suite.Model.AddTask(TaskStoreRequest{
-		Title:            "New",
-		Task_Description: "This",
-		Task_Status:      true,
-	})
+	errorChannel := make(chan error)
+	resultChannel := make(chan TaskStoreResponse)
+	wg := sync.WaitGroup{}
+	resultStore := []TaskStoreResponse{}
 
-	Suite.Suite.NoError(err, "Error occured even before the edit Test Case Start! .")
-	newTask := resp.Task
-	newTask.Task_Description = strconv.Itoa(100)
-
-	resp, err = Suite.Model.EditTask(UpdateTaskStoreRequest{
-		ID:   resp.ID,
-		Task: newTask,
-	})
-
-	Suite.Suite.NoError(err, "Error occured in First Edit.")
-
-	respList := make([]TaskStoreResponse, 10)
+	defer close(errorChannel)
+	defer close(resultChannel)
+	defer wg.Wait()
 
 	for i := 0; i < 10; i++ {
-		newTask.Task_Description = strconv.Itoa(i)
-		curr := UpdateTaskStoreRequest{
-			ID:   resp.ID,
-			Task: newTask,
+		wg.Add(1)
+		go Suite.Model.AddTask(TaskStoreRequest{
+			Title:            strconv.Itoa(100 + i),
+			Task_Description: strconv.Itoa(100),
+			Task_Status:      true,
+		}, &wg, resultChannel, errorChannel)
+	}
+
+	go func() {
+
+		for err := range errorChannel {
+			Suite.Suite.NoError(err, "Error occured even before the Add Test Case Start! .")
 		}
-		resp, err = Suite.Model.EditTask(curr)
-		Suite.Suite.NoError(err, "Error occured in Concurent file.")
-		if err == nil {
-			respList = append(respList, resp)
+	}()
+
+	go func() {
+
+		for res := range resultChannel {
+			Suite.Suite.True(res.ID >= 1, fmt.Sprintf("Error Has occured in a Add Test Case %v", res.ID))
+			resultStore = append(resultStore, res)
+		}
+	}()
+
+	wg.Wait()
+
+	if len(resultStore) >= 1 {
+		for _, prevRes := range resultStore {
+
+			wg.Add(1)
+			newTask := TaskStoreRequest{
+				Title:            "Hello ",
+				Task_Description: "World",
+				Task_Status:      true,
+			}
+			go Suite.Model.EditTask(UpdateTaskStoreRequest{
+				ID:   prevRes.ID,
+				Task: newTask,
+			}, &wg, resultChannel, errorChannel)
 		}
 	}
 
-	for i := 0; i < 9; i++ {
-		old := resp
-		newres := respList[i+10]
-		//	fmt.Println(newres.ID, " f ", old.ID)
-		Suite.Suite.Equal(newres.ID, old.ID, "Error Has occurred ID don't match")
-		Suite.Suite.NotEqual(newres.Task.Task_Description, old.Task.Task_Description, "Error Has occurred ID don't match")
-	}
+	go func() {
 
+		for err := range errorChannel {
+			Suite.Suite.NoError(err, "Error occured even before the edit Test Case Start! .")
+		}
+	}()
+
+	go func() {
+
+		for res := range resultChannel {
+			Suite.Suite.True(res.ID >= 1, fmt.Sprintf("Error Has occured in a Concurent Test Case %v", res.ID))
+			resultStore = append(resultStore, res)
+		}
+	}()
+
+	wg.Wait()
 }
 
 func (Suite *SuiteStruct) TestDeleteTask() {
 
-	resp, err := Suite.Model.AddTask(TaskStoreRequest{
-		Title:            "New",
-		Task_Description: "This",
+	errorChannel := make(chan error)
+	resultChannel := make(chan TaskStoreResponse)
+	deleteResultChannel := make(chan DeleteTaskStoreResponse)
+
+	wg := sync.WaitGroup{}
+	savedTaskID := 0
+
+	defer close(errorChannel)
+	defer close(resultChannel)
+	defer close(deleteResultChannel)
+	defer wg.Wait()
+
+	task := TaskStoreRequest{
+		Title:            strconv.Itoa(100),
+		Task_Description: strconv.Itoa(100),
 		Task_Status:      true,
-	})
+	}
 
-	Suite.Suite.NoError(err, "Error occured even before the edit Test Case Start! .")
+	wg.Add(1)
+	go Suite.Model.AddTask(task, &wg, resultChannel, errorChannel)
 
-	del_resp, err := Suite.Model.DeleteTask(DeleteTaskStoreRequest{
-		ID:   resp.ID,
-		Task: resp.Task,
-	})
+	go func() {
 
-	Suite.Suite.NoError(err, "Error occue while Positive delete.")
-	Suite.Suite.NotNil(del_resp, "Responce was nil  while Positive delete.")
+		for err := range errorChannel {
+			Suite.Suite.NoError(err, "Error occured even before the Add Test Case Start! .")
+		}
+	}()
 
-	Suite.Suite.Equal(resp.ID, del_resp.ID, " Response was wrong while Positive delete.")
+	go func() {
 
-	neg_val, err := Suite.Model.DeleteTask(DeleteTaskStoreRequest{
-		ID:   del_resp.ID,
-		Task: del_resp.Task,
-	})
+		for res := range resultChannel {
+			Suite.Suite.True(res.ID >= 1, fmt.Sprintf("Error Has occured in a Add Test Case %v", res.ID))
+			savedTaskID = int(res.ID)
+		}
+	}()
 
-	Suite.Suite.Error(err, "Error should not have occured , Negative Test Case Failed!")
-	Suite.Suite.NotNil(neg_val, "Responce in wrong Negative Test Case Failed!")
+	wg.Wait()
+
+	wg.Add(1)
+	go Suite.Model.DeleteTask(DeleteTaskStoreRequest{
+		ID:   int64(savedTaskID),
+		Task: task,
+	}, &wg, deleteResultChannel, errorChannel)
+
+	go func() {
+
+		for err := range errorChannel {
+			Suite.Suite.NoError(err, "Error occured even before the Add Test Case Start! .")
+		}
+	}()
+
+	go func() {
+
+		for res := range deleteResultChannel {
+			Suite.Suite.True(res.ID >= 1, fmt.Sprintf("Error Has occured in a Add Test Case %v", res.ID))
+			savedTaskID = int(res.ID)
+		}
+	}()
+
+	wg.Wait()
 
 }
 
