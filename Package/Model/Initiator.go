@@ -64,10 +64,9 @@ func (Model *ModelStruct) AddTask(Task TaskStoreRequest, Wg *sync.WaitGroup, Res
 	res, err := db.ExecContext(ctx, AddTaskQuery, Task.Title, Task.Task_Description)
 
 	if err != nil {
-		nerr := db.Rollback().Error()
-		if len(nerr) >= 1 {
-			errorObj := errors.New(nerr + " , " + err.Error())
-			ErrorChannel <- errorObj
+		nerr := db.Rollback()
+		if nerr != nil {
+			ErrorChannel <- nerr
 			return
 		} else {
 			ErrorChannel <- err
@@ -78,12 +77,10 @@ func (Model *ModelStruct) AddTask(Task TaskStoreRequest, Wg *sync.WaitGroup, Res
 	taskID, err := res.LastInsertId()
 
 	if err != nil {
-		nerr := db.Rollback().Error()
-		if len(nerr) >= 1 {
-			errorObj := errors.New(nerr + " , " + err.Error())
-			ErrorChannel <- errorObj
+		nerr := db.Rollback()
+		if nerr != nil {
+			ErrorChannel <- nerr
 			return
-
 		} else {
 			ErrorChannel <- err
 			return
@@ -93,10 +90,9 @@ func (Model *ModelStruct) AddTask(Task TaskStoreRequest, Wg *sync.WaitGroup, Res
 	err = db.Commit()
 
 	if err != nil {
-		nerr := db.Rollback().Error()
-		if len(nerr) >= 1 {
-			errorObj := errors.New(nerr + " , " + err.Error())
-			ErrorChannel <- errorObj
+		nerr := db.Rollback()
+		if nerr != nil {
+			ErrorChannel <- nerr
 			return
 		} else {
 			ErrorChannel <- err
