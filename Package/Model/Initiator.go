@@ -264,6 +264,7 @@ func (Model *ModelStruct) DeleteTask(Task DeleteTaskStoreRequest, Wg *sync.WaitG
 	if err != nil {
 
 		ErrorChannel <- err
+		return
 	}
 
 	resp, err := db.ExecContext(ctx, DeleteTaskQuery, Task.ID)
@@ -272,8 +273,10 @@ func (Model *ModelStruct) DeleteTask(Task DeleteTaskStoreRequest, Wg *sync.WaitG
 		nerr := db.Rollback()
 		if nerr != nil {
 			ErrorChannel <- nerr
+			return
 		} else {
 			ErrorChannel <- err
+			return
 		}
 	}
 
@@ -283,8 +286,10 @@ func (Model *ModelStruct) DeleteTask(Task DeleteTaskStoreRequest, Wg *sync.WaitG
 		nerr := db.Rollback()
 		if nerr != nil {
 			ErrorChannel <- nerr
+			return
 		} else {
 			ErrorChannel <- err
+			return
 		}
 	}
 
@@ -292,8 +297,10 @@ func (Model *ModelStruct) DeleteTask(Task DeleteTaskStoreRequest, Wg *sync.WaitG
 		nerr := db.Rollback()
 		if nerr != nil {
 			ErrorChannel <- nerr
+			return
 		} else {
 			ErrorChannel <- err
+			return
 		}
 	}
 
@@ -301,6 +308,7 @@ func (Model *ModelStruct) DeleteTask(Task DeleteTaskStoreRequest, Wg *sync.WaitG
 
 	if errMessage != nil {
 		ErrorChannel <- errMessage
+		return
 	}
 
 	resl := DeleteTaskStoreResponse{

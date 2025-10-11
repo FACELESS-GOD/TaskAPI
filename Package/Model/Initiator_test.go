@@ -68,7 +68,7 @@ func (Suite *SuiteStruct) TestAddTask() {
 	go func() {
 
 		for err := range errorChannel {
-			Suite.Suite.NoError(err, "Error occured even before the edit Test Case Start! .")
+			Suite.Suite.NoError(err, "Error occured even before the edit Test Case Start! .", err.Error())
 		}
 	}()
 
@@ -107,7 +107,7 @@ func (Suite *SuiteStruct) TestEditTask() {
 	go func() {
 
 		for err := range errorChannel {
-			Suite.Suite.NoError(err, "Error occured even before the Add Test Case Start! .")
+			Suite.Suite.NoError(err, "Error occured even before the Add Test Case Start! ."+err.Error())
 		}
 	}()
 
@@ -181,10 +181,10 @@ func (Suite *SuiteStruct) TestDeleteTask() {
 	go func() {
 
 		for err := range errorChannel {
-			Suite.Suite.NoError(err, "Error occured even before the Add Test Case Start! .")
+			errme := "dError occured even before the Add Test Case Start! ." + err.Error()
+			Suite.Suite.NoError(err, errme)
 		}
 	}()
-
 	go func() {
 
 		for res := range resultChannel {
@@ -195,28 +195,33 @@ func (Suite *SuiteStruct) TestDeleteTask() {
 
 	wg.Wait()
 
-	wg.Add(1)
-	go Suite.Model.DeleteTask(DeleteTaskStoreRequest{
-		ID:   int64(savedTaskID),
-		Task: task,
-	}, &wg, deleteResultChannel, errorChannel)
+	for {
 
-	go func() {
+		if savedTaskID >= 1 {
+			wg.Add(1)
+			go Suite.Model.DeleteTask(DeleteTaskStoreRequest{
+				ID:   int64(savedTaskID),
+				Task: task,
+			}, &wg, deleteResultChannel, errorChannel)
 
-		for err := range errorChannel {
-			Suite.Suite.NoError(err, "Error occured even before the Add Test Case Start! .")
+			go func() {
+
+				for err := range errorChannel {
+					Suite.Suite.NoError(err, "d2Error occured even before the Add Test Case Start! ."+err.Error())
+				}
+			}()
+
+			go func() {
+
+				for res := range deleteResultChannel {
+					Suite.Suite.True(res.ID >= 1, fmt.Sprintf("Error Has occured in a Add Test Case %v", res.ID))
+				}
+			}()
+
+			wg.Wait()
+			break
 		}
-	}()
-
-	go func() {
-
-		for res := range deleteResultChannel {
-			Suite.Suite.True(res.ID >= 1, fmt.Sprintf("Error Has occured in a Add Test Case %v", res.ID))
-			savedTaskID = int(res.ID)
-		}
-	}()
-
-	wg.Wait()
+	}
 
 }
 
