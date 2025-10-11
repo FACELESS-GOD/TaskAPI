@@ -155,6 +155,7 @@ func (Suite *SuiteStruct) TestEditTask() {
 	wg.Wait()
 }
 
+// func (Model *ModelStruct) DeleteTask(Task DeleteTaskStoreRequest, Wg *sync.WaitGroup, ResultChannel chan<- DeleteTaskStoreResponse, ErrorChannel chan<- error)
 func (Suite *SuiteStruct) TestDeleteTask() {
 
 	errorChannel := make(chan error)
@@ -225,6 +226,7 @@ func (Suite *SuiteStruct) TestDeleteTask() {
 
 }
 
+// func (Model *ModelStruct) ListTask(Task ListTaskStore) ([]TaskStoreResponse, error)
 func (Suite *SuiteStruct) TestListTask() {
 
 	resp, err := Suite.Model.ListTask(ListTaskStore{
