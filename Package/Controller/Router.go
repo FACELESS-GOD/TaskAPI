@@ -12,7 +12,7 @@ import (
 type AddTaskStruct struct {
 	Title            string `json:"Title" binding:"required"`
 	Task_Description string `json:"Task_Description" binding:"required"`
-	Task_Status      string `json:"Task_Status" binding:"required, oneof=true false"`
+	Task_Status      string `json:"Task_Status" binding:"required,oneof=true false"`
 }
 
 func (Ctr *ControllerStruct) AddData(GinCtx *gin.Context) {

@@ -13,7 +13,7 @@ type ModelInterface interface {
 	AddTask(Task TaskStoreRequest, Wg *sync.WaitGroup, ResultChannel chan<- TaskStoreResponse, ErrorChannel chan<- error)
 	EditTask(Task UpdateTaskStoreRequest, Wg *sync.WaitGroup, ResultChannel chan<- TaskStoreResponse, ErrorChannel chan<- error)
 	DeleteTask(Task DeleteTaskStoreRequest, Wg *sync.WaitGroup, ResultChannel chan<- DeleteTaskStoreResponse, ErrorChannel chan<- error)
-	ListTask(ListTask ListTaskStore, WaitGroup *sync.WaitGroup)
+	ListTask(Task ListTaskStore) ([]TaskStoreResponse, error)
 }
 
 type ModelStruct struct {

@@ -21,6 +21,7 @@ type ConfiguratorStruct struct {
 	SqlDBConn    *sql.DB
 	DbCtx        context.Context
 	DbCancelFunc context.CancelFunc
+	Address      string
 }
 
 func NewConfigurator() *ConfiguratorStruct {
@@ -34,6 +35,7 @@ func (Conf *ConfiguratorStruct) LoadConfig(Mode int) {
 
 		Conf.DbDriver = "mysql"
 		Conf.DbConnString = "Test:Test123@/bank_qa?parseTime=true"
+		Conf.Address = "0.0.0.0:8080"
 
 	case Startup.QAMode:
 

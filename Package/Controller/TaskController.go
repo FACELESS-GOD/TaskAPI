@@ -19,7 +19,7 @@ type ControllerStruct struct {
 	router *gin.Engine
 }
 
-func NewModel(Mdl Model.ModelInterface) ControllerStruct {
+func NewController(Mdl Model.ModelInterface) ControllerStruct {
 	ctrl := ControllerStruct{}
 	router := gin.Default()
 
