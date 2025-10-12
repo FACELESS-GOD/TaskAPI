@@ -11,6 +11,7 @@ import (
 
 type ModelInterface interface {
 	AddTask(Task TaskStoreRequest, Wg *sync.WaitGroup, ResultChannel chan<- TaskStoreResponse, ErrorChannel chan<- error)
+	GetTask(Task GetTask, Wg *sync.WaitGroup, ResultChannel chan<- TaskStoreResponse, ErrorChannel chan<- error)
 	EditTask(Task UpdateTaskStoreRequest, Wg *sync.WaitGroup, ResultChannel chan<- TaskStoreResponse, ErrorChannel chan<- error)
 	DeleteTask(Task DeleteTaskStoreRequest, Wg *sync.WaitGroup, ResultChannel chan<- DeleteTaskStoreResponse, ErrorChannel chan<- error)
 	ListTask(Task ListTaskStore) ([]TaskStoreResponse, error)
@@ -385,4 +386,97 @@ func (Model *ModelStruct) ListTask(Task ListTaskStore) ([]TaskStoreResponse, err
 
 	return respList, nil
 
+}
+
+const GetTaskQuery string = `
+SELECT * FROM TaskStore 
+WHERE ID = ? 
+;
+`
+
+func (Model *ModelStruct) GetTask(Task GetTask, Wg *sync.WaitGroup, ResultChannel chan<- TaskStoreResponse, ErrorChannel chan<- error) {
+
+	defer Wg.Done()
+
+	isValid, message := Model.ValidateParamGetTask(Task)
+
+	if isValid == true {
+		errObj := errors.New(message)
+		ErrorChannel <- errObj
+	}
+
+	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancelFunc()
+	rsul := TaskStoreResponse{}
+
+	db, err := Model.Config.SqlDBConn.BeginTx(ctx, &Model.TxOption)
+
+	if err != nil {
+
+		ErrorChannel <- err
+		return
+	}
+
+	resp, err := db.QueryContext(ctx, GetTaskQuery, Task.ID)
+
+	if err != nil {
+		nerr := db.Rollback()
+		if nerr != nil {
+			ErrorChannel <- nerr
+			return
+		} else {
+			ErrorChannel <- err
+			return
+		}
+	}
+
+	for resp.Next() {
+		var task TaskStoreRequest
+		t := ""
+		e := ""
+
+		err := resp.Scan(
+			&rsul.ID,
+			&task.Title,
+			&task.Task_Description,
+			&task.Task_Status,
+			&t,
+			&e,
+		)
+
+		if err != nil {
+			ErrorChannel <- err
+			return
+		}
+		rsul.Task = task
+	}
+
+	errMessage := db.Commit()
+
+	if errMessage != nil {
+		ErrorChannel <- errMessage
+		return
+	}
+
+	ResultChannel <- rsul
+
+	return
+
+}
+
+func (Model *ModelStruct) ValidateParamGetTask(Task GetTask) (bool, string) {
+	var IsValid bool = false
+	errMessages := []string{}
+	errorMessage := ""
+
+	if Task.ID < 1 {
+		IsValid = true
+		errMessages = append(errMessages, "Invalid ID!")
+	}
+
+	for _, message := range errMessages {
+		errorMessage = errorMessage + message + " , "
+	}
+
+	return IsValid, errorMessage
 }

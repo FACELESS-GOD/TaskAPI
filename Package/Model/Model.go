@@ -32,3 +32,8 @@ type ListTaskStore struct {
 	Page   int64
 	Offset int64
 }
+
+type GetTask struct {
+	ID int64
+}
+

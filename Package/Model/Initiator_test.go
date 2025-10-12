@@ -244,6 +244,77 @@ func (Suite *SuiteStruct) TestListTask() {
 
 }
 
+// func (Model *ModelStruct) GetTask(Task GetTask, Wg *sync.WaitGroup, ResultChannel chan<- TaskStoreResponse, ErrorChannel chan<- error)
+func (Suite *SuiteStruct) TestGetTask() {
+
+	errorChannel := make(chan error)
+	resultChannel := make(chan TaskStoreResponse)
+	taskStoreResponseChannel := make(chan TaskStoreResponse)
+
+	wg := sync.WaitGroup{}
+	savedTaskID := 0
+
+	defer close(errorChannel)
+	defer close(resultChannel)
+	defer close(taskStoreResponseChannel)
+	defer wg.Wait()
+
+	task := TaskStoreRequest{
+		Title:            strconv.Itoa(100),
+		Task_Description: strconv.Itoa(100),
+		Task_Status:      true,
+	}
+
+	wg.Add(1)
+	go Suite.Model.AddTask(task, &wg, resultChannel, errorChannel)
+
+	go func() {
+
+		for err := range errorChannel {
+			errme := "dError occured even before the Add Test Case Start! ." + err.Error()
+			Suite.Suite.NoError(err, errme)
+		}
+	}()
+	go func() {
+
+		for res := range resultChannel {
+			Suite.Suite.True(res.ID >= 1, fmt.Sprintf("Error Has occured in a Add Test Case %v", res.ID))
+			savedTaskID = int(res.ID)
+		}
+	}()
+
+	wg.Wait()
+
+	for {
+
+		if savedTaskID >= 1 {
+			wg.Add(1)
+
+			go Suite.Model.GetTask(GetTask{
+				ID: int64(savedTaskID),
+			}, &wg, taskStoreResponseChannel, errorChannel)
+
+			go func() {
+
+				for err := range errorChannel {
+					Suite.Suite.NoError(err, "d2Error occured even before the Add Test Case Start! ."+err.Error())
+				}
+			}()
+
+			go func() {
+
+				for res := range taskStoreResponseChannel {
+					Suite.Suite.NotNil(res, fmt.Sprintf("Error Has Occured with responce of GetTask !"))
+				}
+			}()
+
+			wg.Wait()
+			break
+		}
+	}
+
+}
+
 func TestSuite(Testor *testing.T) {
 	suite.Run(Testor, new(SuiteStruct))
 }
