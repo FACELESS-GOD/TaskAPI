@@ -1,26 +1,36 @@
 package Controller
 
-import "TaskManager/Package/Model"
+import (
+	"TaskManager/Helper/Route"
+	"TaskManager/Package/Model"
+
+	"github.com/gin-gonic/gin"
+)
 
 type ControllerInterface interface {
-	AddData()
-	EditData()
-	DeleteData()
-	ListData()
+	AddData(GinCtx *gin.Context)
+	EditData(GinCtx *gin.Context)
+	DeleteData(GinCtx *gin.Context)
+	ListData(GinCtx *gin.Context)
 }
 
 type ControllerStruct struct {
-	Model Model.ModelInterface
+	Model  Model.ModelInterface
+	router *gin.Engine
 }
 
-func NewModel() ControllerStruct {
-	return ControllerStruct{}
+func NewModel(Mdl Model.ModelInterface) ControllerStruct {
+	ctrl := ControllerStruct{}
+	router := gin.Default()
+
+	router.POST(Route.PostURL, ctrl.AddData)
+
+	ctrl.Model = Mdl
+	ctrl.router = router
+
+	return ctrl
 }
 
-func (Ctr *ControllerStruct) AddData() {}
-
-func (Ctr *ControllerStruct) EditData() {}
-
-func (Ctr *ControllerStruct) DeleteData() {}
-
-func (Ctr *ControllerStruct) ListData() {}
+func (Ctrl *ControllerStruct) StartServer(Address string) error {
+	return Ctrl.router.Run(Address)
+}
