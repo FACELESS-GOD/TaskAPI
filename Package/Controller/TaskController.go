@@ -26,8 +26,25 @@ type AddTaskStruct struct {
 	Task_Status      string `json:"Task_Status" binding:"required,oneof=true false"`
 }
 
-type GetTask struct {
+type GetTaskStruct struct {
 	ID int64 `json:"ID" binding:"required,min=1"`
+}
+
+type UpdateTaskStruct struct {
+	ID               int64  `json:"ID" binding:"required,min=1"`
+	Title            string `json:"Title" binding:"required"`
+	Task_Description string `json:"Task_Description" binding:"required"`
+	Task_Status      string `json:"Task_Status" binding:"required,oneof=true false"`
+}
+
+type DeleteTaskStruct struct {
+	ID int64 `json:"ID" binding:"required,min=1"`
+}
+
+type ListTaskStruct struct {
+	Limit  int64 `json:"Limit" binding:"required"`
+	Page   int64 `json:"Page" binding:"required"`
+	Offset int64 `json:"Offset"`
 }
 
 func NewController(Mdl Model.ModelInterface) ControllerStruct {
@@ -36,6 +53,9 @@ func NewController(Mdl Model.ModelInterface) ControllerStruct {
 
 	router.POST(Route.PostURL, ctrl.AddData)
 	router.GET(Route.GetURL, ctrl.GetData)
+	router.PUT(Route.EditURL, ctrl.EditData)
+	router.DELETE(Route.DeleteURL, ctrl.DeleteData)
+	router.GET(Route.ListPaginationURL, ctrl.ListData)
 
 	ctrl.Model = Mdl
 	ctrl.router = router

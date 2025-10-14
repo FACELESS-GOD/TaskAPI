@@ -144,7 +144,7 @@ func (Model *ModelStruct) ValidateParamAddTask(Task TaskStoreRequest) (bool, str
 
 const EditTaskQuery string = `
 UPDATE TaskStore 
-SET Title = ? , Task_Description = ? ,Edited_On = CURRENT_TIMESTAMP()
+SET Title = ? , Task_Description = ? , Task_Status = ? , Edited_On = CURRENT_TIMESTAMP()
 WHERE ID = ? 
 ;
 `
@@ -192,7 +192,7 @@ func (Model *ModelStruct) EditTask(Task UpdateTaskStoreRequest, Wg *sync.WaitGro
 		return
 	}
 
-	resp, err := db.ExecContext(ctx, EditTaskQuery, Task.Task.Title, Task.Task.Task_Description, Task.ID)
+	resp, err := db.ExecContext(ctx, EditTaskQuery, Task.Task.Title, Task.Task.Task_Description, Task.Task.Task_Status, Task.ID)
 
 	if err != nil {
 		rollBackErr := db.Rollback()
@@ -390,7 +390,7 @@ func (Model *ModelStruct) ListTask(Task ListTaskStore) ([]TaskStoreResponse, err
 
 const GetTaskQuery string = `
 SELECT * FROM TaskStore 
-WHERE ID = ? 
+WHERE Task_Status = true AND ID = ? 
 ;
 `
 
@@ -405,7 +405,7 @@ func (Model *ModelStruct) GetTask(Task GetTask, Wg *sync.WaitGroup, ResultChanne
 		ErrorChannel <- errObj
 	}
 
-	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*100)
 	defer cancelFunc()
 	rsul := TaskStoreResponse{}
 
