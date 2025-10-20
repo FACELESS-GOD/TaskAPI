@@ -5,14 +5,22 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/spf13/viper"
 )
 
 type ConfiguratorInterface interface {
 	LoadConfig()
 	LoadDBInstance()
+}
+
+type configParser struct {
+	DbDriver     string `mapstructure="DBDRIVER"`
+	DbConnString string `mapstructure="DBCONNSTRING"`
+	Address      string `mapstructure="ADDRESS"`
 }
 
 type ConfiguratorStruct struct {
@@ -33,9 +41,28 @@ func (Conf *ConfiguratorStruct) LoadConfig(Mode int) {
 	switch Mode {
 	case Startup.DebugMode:
 
-		Conf.DbDriver = "mysql"
-		Conf.DbConnString = "Test:Test123@/bank_qa?parseTime=true"
-		Conf.Address = "0.0.0.0:8080"
+		var configParser configParser
+
+		viper.AddConfigPath(".")
+		viper.SetConfigName("app")
+		viper.SetConfigType("env")
+
+		//viper.AutomaticEnv()
+
+		err := viper.ReadInConfig()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = viper.Unmarshal(&configParser)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		Conf.DbDriver = configParser.DbDriver
+		Conf.DbConnString = configParser.DbConnString
+		Conf.Address = configParser.Address
 
 	case Startup.QAMode:
 
